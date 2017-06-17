@@ -1,0 +1,14 @@
+[Unit]
+Description=Raspberry Pi RX5808 Stream Server
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/rpi-rx5808-stream.py
+
+Restart=always
+RestartSec=15
+WatchdogSec=1
+
+[Install]
+WantedBy=multi-user.target
