@@ -226,10 +226,12 @@ def buildIndexPage(environ):
     if last_proc != None:
         stat = runCommand('[ -d "/proc/' + str(last_proc.pid) + '" ] && echo "ok" || echo "error - file not found"')
     if stat.startswith("ok"):
-        page_text += "Process is running..."
+        page_text += "Process PID {} is running...".format(str(last_proc.pid))
     else:
-        page_text += "Process is <b>not</b> running (" + stat + ")!"
-        page_text += ' <a href="?reload">(Restart Process)</a>'
+        page_text += "Process PID {} is <b>not</b> running (".format(str(last_proc.pid))
+        page_text += stat + ")!"
+
+    page_text += ' <a href="?reload">(Restart Process)</a>'
 
     page_text += """</p>
     <p>Linux Status: """ + runCommand("uptime") + "</p>"
@@ -614,9 +616,11 @@ def handleSettings(queryString):
     if queryString == "reboot":
         runCommand("sudo shutdown -r now")
     elif queryString == "reload":
+        kill_child()
+        time.sleep(0.25)
         runGStreamer()
         lastCommandResult = "Streaming Server has been restarted..."
-        time.sleep(0.1)
+        time.sleep(0.2)
     elif queryString.startswith("freq=") and queryString.endswith("MHz"):
         freq = queryString.replace("freq=", "").replace("MHz", "")
         lastCommandResult = set_frequency(freq)
