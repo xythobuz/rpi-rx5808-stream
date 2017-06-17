@@ -7,8 +7,8 @@ Type=notify
 ExecStart=/usr/local/bin/rpi-rx5808-stream.py
 
 Restart=always
-RestartSec=15
-WatchdogSec=1
+RestartSec=2
+WatchdogSec=2
 
 [Install]
 WantedBy=multi-user.target network-online.target

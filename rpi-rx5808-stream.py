@@ -107,7 +107,6 @@ def buildIndexPage(environ):
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="refresh" content="10" >
     <title>RX5808 Stream</title>
   </head>
   <body>
