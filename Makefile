@@ -9,13 +9,15 @@ deps:
 	apt-get -y install gstreamer1.0-plugins-good gstreamer1.0-tools python-rpi.gpi
 
 install: rpi-rx5808-stream.py rpi-rx5808-stream.service
-	@echo "Installing binary..."
+	@echo "==== Stopping existing service, if it exists..."
+	sudo systemctl stop rpi-rx5808-stream.service || true
+	@echo "==== Installing binary..."
 	cp rpi-rx5808-stream.py /usr/local/bin/rpi-rx5808-stream.py
 	chmod 774 /usr/local/bin/rpi-rx5808-stream.py
-	@echo "Installing service..."
+	@echo "==== Installing service..."
 	cp rpi-rx5808-stream.service /etc/systemd/system/rpi-rx5808-stream.service
 	chmod 665 /etc/systemd/system/rpi-rx5808-stream.service
-	@echo "Registering service..."
+	@echo "==== Registering service..."
 	systemctl daemon-reload
 	systemctl start rpi-rx5808-stream.service
 
