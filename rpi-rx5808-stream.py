@@ -232,7 +232,17 @@ def buildIndexPage(environ):
         page_text += ' <a href="?reload">(Restart Process)</a>'
 
     page_text += """</p>
-    <p>Linux Status: """ + runCommand("uptime") + """</p>
+    <p>Linux Status: """ + runCommand("uptime") + "</p>"
+
+    cpu = int(runCommand("cat /sys/class/thermal/thermal_zone0/temp"))
+    cpu1 = cpu / 1000
+    cpu2 = cpu / 1000
+    cpuM = cpu2 % cpu1
+    cpu = str(cpu1) + "." + str(cpuM) + "'C"
+    gpu = runCommand("vcgencmd measure_temp | sed 's/temp=//'")
+    page_text += "<p>Temperatures CPU: {} GPU: {}</p>".format(cpu, gpu)
+
+    page_text += """</p>
     <p><a href="?reboot">Reboot Raspberry Pi</a></p>
     <hr />
     <p>Version 0.1 - Made by <a href="http://xythobuz.de">Thomas Buck &lt;xythobuz@xythobuz.de&gt;</a></p>
