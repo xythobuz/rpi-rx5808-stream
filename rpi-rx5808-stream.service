@@ -11,4 +11,4 @@ RestartSec=15
 WatchdogSec=1
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target network-online.target

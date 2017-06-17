@@ -19,5 +19,6 @@ install: rpi-rx5808-stream.py rpi-rx5808-stream.service
 	chmod 665 /etc/systemd/system/rpi-rx5808-stream.service
 	@echo "==== Registering service..."
 	systemctl daemon-reload
+	systemctl enable rpi-rx5808-stream.service
 	systemctl start rpi-rx5808-stream.service
 
