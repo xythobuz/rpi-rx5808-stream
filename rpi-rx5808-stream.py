@@ -107,6 +107,7 @@ def buildIndexPage(environ):
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="10" >
     <title>RX5808 Stream</title>
   </head>
   <body>
@@ -253,6 +254,7 @@ def buildIndexPage(environ):
     page_text += "<p>Temperatures CPU: {} GPU: {}</p>".format(cpu, gpu)
 
     page_text += """</p>
+    <p><a href="?quit">Restart RX5808 Streaming Server</a></p>
     <p><a href="?reboot">Reboot Raspberry Pi</a></p>
     <hr />
     <p>Version 0.1 - Made by <a href="http://xythobuz.de">Thomas Buck &lt;xythobuz@xythobuz.de&gt;</a></p>
@@ -633,6 +635,9 @@ def handleSettings(queryString):
         freq = queryString.replace("freq=", "").replace("MHz", "")
         lastCommandResult = set_frequency(freq)
         time.sleep(0.1)
+    elif queryString == "quit":
+        print("Exiting after user request!")
+        kill_all()
     else:
         print("Got unknown query string: \"{}\"".format(queryString))
 
