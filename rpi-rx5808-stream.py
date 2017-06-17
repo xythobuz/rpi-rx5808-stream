@@ -226,7 +226,11 @@ def buildIndexPage(environ):
     if last_proc != None:
         stat = runCommand('[ -d "/proc/' + str(last_proc.pid) + '" ] && echo "ok" || echo "error - file not found"')
     if stat.startswith("ok"):
-        page_text += "Process PID {} is running...".format(str(last_proc.pid))
+        stat = runCommand("cat /proc/1068/status | grep State:")
+        if "zombie" in stat:
+            page_text += "Process PID {} is a <b>zombie</b>!".format(str(last_proc.pid))
+        else:
+            page_text += "Process PID {} is running...".format(str(last_proc.pid))
     else:
         page_text += "Process PID {} is <b>not</b> running (".format(str(last_proc.pid))
         page_text += stat + ")!"
