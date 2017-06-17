@@ -40,7 +40,7 @@
 
 from Queue import Queue
 from threading import Thread
-from socket import socket
+import socket
 from select import select
 from wsgiref.simple_server import WSGIServer, make_server, WSGIRequestHandler
 from SocketServer import ThreadingMixIn
@@ -53,7 +53,7 @@ import time
 
 # -----------------------------------------------------------------------------
 
-web_port = 8080
+web_port = 80
 
 video_host = '127.0.0.1'
 video_port = 9999
@@ -700,7 +700,7 @@ should_start_gstreamer = False
 def input_loop(app):
     global thread_running, should_start_gstreamer
 
-    sock = socket()
+    sock = socket.socket()
     sock.bind((video_host, video_port))
     sock.listen(1)
 
