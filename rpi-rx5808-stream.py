@@ -75,21 +75,25 @@ pin_ch3 = 11
 
 # -----------------------------------------------------------------------------
 
-path = "/dev/"
-files = []
-for i in os.listdir(path):
-    f = os.path.join(path, i)
-    if "/dev/video" in f:
-        files.append(f)
-
 video_device = None
 
-if len(files) > 0:
-    video_device = files[0]
-    print("Selected \"{}\" as video device...".format(video_device))
-else:
-    print("No video device found!")
-    os.abort()
+def determineVideoDevice():
+    global video_device
+
+    path = "/dev/"
+    files = []
+    for i in os.listdir(path):
+        f = os.path.join(path, i)
+        if "/dev/video" in f:
+            files.append(f)
+
+    if len(files) > 0:
+        video_device = files[0]
+        print("Selected \"{}\" as video device...".format(video_device))
+    else:
+        video_device = None
+        print("No video device found!")
+        os.abort()
 
 # -----------------------------------------------------------------------------
 
@@ -652,6 +656,8 @@ last_proc = None
 
 def runGStreamer():
     global last_proc
+
+    determineVideoDevice()
 
     last_proc = subprocess.Popen(args = buildGStreamerCommand(), stdin = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 
