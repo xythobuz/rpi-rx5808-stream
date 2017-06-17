@@ -617,10 +617,10 @@ def handleSettings(queryString):
         runCommand("sudo shutdown -r now")
     elif queryString == "reload":
         kill_child()
-        time.sleep(0.25)
+        time.sleep(0.5)
         runGStreamer()
         lastCommandResult = "Streaming Server has been restarted..."
-        time.sleep(0.2)
+        time.sleep(0.5)
     elif queryString.startswith("freq=") and queryString.endswith("MHz"):
         freq = queryString.replace("freq=", "").replace("MHz", "")
         lastCommandResult = set_frequency(freq)
@@ -736,9 +736,10 @@ def input_loop(app):
 
         print("StreamInput: Lost input stream from {}!".format(addr))
 
-        if thread_running:
-            print("StreamInput: Restarting GStreamer child process...")
-            runGStreamer()
+        #if thread_running:
+        #    print("StreamInput: Restarting GStreamer child process...")
+        #    time.sleep(0.5)
+        #    runGStreamer()
 
     print("StreamInput: Goodbye...")
 
