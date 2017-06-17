@@ -236,7 +236,7 @@ def buildIndexPage(environ):
 
     cpu = int(runCommand("cat /sys/class/thermal/thermal_zone0/temp"))
     cpu1 = cpu / 1000
-    cpu2 = cpu / 1000
+    cpu2 = cpu / 100
     cpuM = cpu2 % cpu1
     cpu = str(cpu1) + "." + str(cpuM) + "'C"
     gpu = runCommand("vcgencmd measure_temp | sed 's/temp=//'")
