@@ -791,6 +791,12 @@ def watchdog_ping(address, sock):
     message = b"WATCHDOG=1"
     return sd_message(address, sock, message)
 
+def systemd_ready(address, sock):
+    """Helper function to send a ready signal."""
+    message = b"READY=1"
+    theLog.debug("Signaling system ready")
+    return sd_message(address, sock, message)
+
 def systemd_status(address, sock, status):
     """Helper function to update the service status."""
     message = ("STATUS=%s" % status).encode('utf8')
@@ -798,6 +804,10 @@ def systemd_status(address, sock, status):
 
 notify = notify_socket()
 period = watchdog_period()
+
+def watchdog_ready():
+    if notify:
+        systemd_ready(*notify)
 
 def watchdog_status(stat):
     if notify:
@@ -838,7 +848,7 @@ def kill_child():
         os.kill(last_proc.pid, signal.SIGKILL)
 
 if __name__ == '__main__':
-    watchdog_status(b"Initializing")
+    watchdog_status(b"Initializing stream...")
 
     app = IPCameraApp()
 
@@ -859,7 +869,8 @@ if __name__ == '__main__':
     atexit.register(kill_all)
     runGStreamer()
 
-    watchdog_status(b"Mainloop started")
+    watchdog_ready()
+    watchdog_status(b"Mainloop started, serving content.")
 
     try:
         print("StreamServer: Serving HTTP content...")
