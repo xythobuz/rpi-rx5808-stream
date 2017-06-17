@@ -641,7 +641,7 @@ def handleSettings(queryString):
 def buildGStreamerCommand():
     global video_device, video_norm, video_framerate, video_width, video_height
 
-    return ("exec gst-launch-1.0 "
+    return ("exec gst-launch-1.0 -v "
         "v4l2src device=" + str(video_device) + " norm=" + str(video_norm) + " "
         #"videotestsrc pattern=ball "
         "! video/x-raw, framerate=" + str(video_framerate) + ", width=" + str(video_width) + ", height=" + str(video_height) + " "
