@@ -794,7 +794,6 @@ def watchdog_ping(address, sock):
 def systemd_ready(address, sock):
     """Helper function to send a ready signal."""
     message = b"READY=1"
-    theLog.debug("Signaling system ready")
     return sd_message(address, sock, message)
 
 def systemd_status(address, sock, status):
