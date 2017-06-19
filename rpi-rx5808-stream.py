@@ -3,7 +3,7 @@
 # Dependency installation:
 # sudo apt-get update
 # sudo apt-get -y upgrade
-# sudo apt-get -y install gstreamer1.0-plugins-good gstreamer1.0-tools python-rpi.gpio
+# sudo apt-get -y install gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-tools gstreamer1.0-alsa python-rpi.gpio
 #
 # Enable Hardware Watchdog:
 # sudo vi /etc/systemd/system.conf
@@ -90,7 +90,7 @@ video_norm = 'NTSC'
 # The MJPEG output framerate fraction is determined by this setting. For old
 # models like my Raspberry Pi 1, keep this value low, like '1/1' (1FPS).
 # Faster framerates could be eg. '10/1' (10FPS).
-video_out_framerate = '1/1'
+video_out_framerate = '2/3'
 
 # Boundary between MJPEG mutlipart frames. Can be set to any random string.
 boundary_string = "raspberrypi-rx5808-stream-xythobuz"
@@ -117,6 +117,34 @@ maximum_clients = 1
 # Change the port if you have a conflict with some other running application.
 video_host = '127.0.0.1'
 video_port = 9999
+
+audio_host = '127.0.0.1'
+audio_port = 9998
+
+# Parameters for your audio input device.
+# Test the audio recording like this:
+#
+# gst-launch-1.0 -v \
+#     alsasrc device=hw:CARD=usbtv,DEV=0 \
+#     ! audio/x-raw, channels=2, rate=48000 \
+#     ! lamemp3enc target=bitrate bitrate=64 mono=true \
+#     ! filesink location=test.mp3
+#
+# Query the available settings like this:
+#
+# gst-launch-1.0 --gst-debug=alsa:5 \
+#     alsasrc device=hw:CARD=usbtv,DEV=0 \
+#     ! fakesink 2>&1 \
+#     | sed -une '/returning caps/  s/[s;] /\n/gp'
+#
+# (replace hw:CARD=usbtv,DEV=0 with your hardware identifier string)
+audio_device = "hw:CARD=usbtv,DEV=0"
+audio_channels = "2"
+audio_rate = "48000"
+
+# MP3 output bitrate. Valid values here are:
+# 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256 or 320
+audio_mp3_bitrate = "24"
 
 # -----------------------------------------------------------------------------
 # ----- Automatic /dev/video* device search -----
@@ -176,18 +204,25 @@ def buildIndexPage(environ):
     <table>
       <tr>
         <td>
-        <canvas id="player" width=""" + '"' + str(canvas_width) + '" height="' + str(canvas_height) + '"' + """ style="background: #000; width: """ + str(canvas_width) + "px; height: " + str(canvas_height) + 'px;"' + """>
+          <canvas id="player" width=""" + '"' + str(canvas_width) + '" height="' + str(canvas_height) + '"' + """ style="background: #000; width: """ + str(canvas_width) + "px; height: " + str(canvas_height) + 'px;"' + """>
             <noscript>
               <img src="/mjpeg_stream" width=""" + '"' + str(canvas_width) + '" height="' + str(canvas_height) + '"' + """ />
               <p>Use a modern browser with Javascript and HTML5 support to enable playback controls.</p>
             </noscript>
           </canvas>
+          <audio id="audio_player">
+            <noscript>
+              <p>Use a modern browser with Javascript and HTML5 support to enable audio playback.</p>
+            </noscript>
+          </audio>
           <p><a href="/mjpeg_stream">Link to video stream</a></p>
           <p>Click on video frame to play or pause stream:</p>
           <div id="status">
             <p>Stream status: Loading...</p>
           </div>
         </td><td>
+          <p>Volume: <input id="volume_control" type="range" min="0" max="100" step="1" oninput="SetVolume(this.value)" onchange="SetVolume(this.value)"></input> <span id="volume_text" /></p>
+          <hr />
           <p>Currently selected Frequency: <b>""" + get_frequency() + """</b> """ + get_osc_settings() + """</p>
           <hr />
           <p>RX5808 Frequency selection:</p>
@@ -353,9 +388,10 @@ var MJPEG = (function(module) {
     self.stop = function() { setRunning(false); }
   };
 
-  module.Player = function(canvas, url, options) {
+  module.Player = function(canvas, url, audio_player, audio_url, options) {
 
     var self = this;
+
     if (typeof canvas === "string" || canvas instanceof String) {
       canvas = document.getElementById(canvas);
     }
@@ -381,6 +417,17 @@ var MJPEG = (function(module) {
         self.start();
       }
     }, false);
+
+    if (typeof audio_player === "string" || audio_player instanceof String) {
+      audio_player = document.getElementById(audio_player);
+    }
+
+    var volume_control = document.getElementById('volume_control');
+    var volume_text = document.getElementById('volume_text');
+    volume_control.value = 10;
+    volume_text.innerHTML = "10%"
+
+    audio_player.volume = 0.1;
 
     function scaleRect(srcSize, dstSize) {
       var ratio = Math.min(dstSize.width / srcSize.width,
@@ -454,10 +501,17 @@ var MJPEG = (function(module) {
       self.status.innerHTML = "<p>Stream status: Started!</p>";
 
       canvasText("Loading stream...", 10);
+      canvasText("(Audio may be delayed a bit)", 60);
       canvasText('URL: "' + url + '"', -canvas.height / 2 + 10, 12);
+
+      audio_player.src = audio_url;
+      audio_player.play();
     }
 
     self.stop = function() {
+      audio_player.pause();
+      audio_player.src = '';
+
       self.stream.stop();
       self.status.innerHTML = "<p>Stream status: Stopped!</p>";
 
@@ -470,12 +524,25 @@ var MJPEG = (function(module) {
 })(MJPEG || {});
 
 var url = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/mjpeg_stream";
-console.log("Connecting to: " + url)
+var audio_url = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/mp3_stream";
+
+console.log("Connecting to: " + url);
+console.log("Connecting to: " + audio_url);
 
 window.history.pushState(null, null, '/');
 
-var player = new MJPEG.Player("player", url);
+var player = new MJPEG.Player("player", url, "audio_player", audio_url);
 player.start();
+
+function SetVolume(val) {
+  var player = document.getElementById('audio_player');
+  var volume_text = document.getElementById('volume_text');
+
+  player.volume = val / 100.0;
+  volume_text.innerHTML = String(val) + "%"
+
+  console.log('New volume: ' + player.volume);
+}
   </script>
 </html>
 """
@@ -730,7 +797,11 @@ def buildGStreamerCommand():
         "! video/x-raw, framerate=" + str(video_out_framerate) + " "
         "! jpegenc "
         "! multipartmux boundary=" + str(boundary_string) + " "
-        "! tcpclientsink host=" + str(video_host) + " port=" + str(video_port)
+        "! tcpclientsink host=" + str(video_host) + " port=" + str(video_port) + " "
+        "alsasrc device=" + str(audio_device) + " "
+        "! audio/x-raw, channels=" + str(audio_channels) + ", rate=" + str(audio_rate) + " "
+        "! lamemp3enc target=bitrate bitrate=" + str(audio_mp3_bitrate) + " mono=true "
+        "! tcpclientsink host=" + str(audio_host) + " port=" + str(audio_port) + " "
     )
 
 last_proc = None
@@ -771,6 +842,7 @@ thread_running = True
 
 class IPCameraApp(object):
     queues = []
+    audio_queues = []
 
     def __call__(self, environ, start_response):
         if environ['PATH_INFO'] == '/':
@@ -787,6 +859,17 @@ class IPCameraApp(object):
                 return self.stream(start_response)
             else:
                 text = "No streaming slots available ({}/{})!".format(client_count, maximum_clients)
+                error_page_contents = buildErrorPage(environ, "503", "Service Unavailable", text)
+                start_response("503 Service Unavailable", [
+                    ("Content-Type", "text/html"),
+                    ("Content-Length", str(len(error_page_contents)))
+                ])
+                return iter([error_page_contents])
+        elif environ['PATH_INFO'] == '/mp3_stream':
+            if client_count > 0:
+                return self.stream_audio(start_response)
+            else:
+                text = "Stream hasn't been started. Please GET /mjpeg_stream first!"
                 error_page_contents = buildErrorPage(environ, "503", "Service Unavailable", text)
                 start_response("503 Service Unavailable", [
                     ("Content-Type", "text/html"),
@@ -834,8 +917,29 @@ class IPCameraApp(object):
             print("StreamOutput: Last client, stopping GStreamer...")
             killGStreamer()
 
+    # MP3 client Thread
+    def stream_audio(self, start_response):
+        global thread_running
+
+        print("StreamAudioOutput: Started streaming to a client...")
+
+        start_response('200 OK', [('Content-type', 'audio/mpeg')])
+
+        q = Queue()
+        self.audio_queues.append(q)
+
+        while thread_running:
+            try:
+                yield q.get()
+            except:
+                if q in self.audio_queues:
+                    self.audio_queues.remove(q)
+                break
+
+        print("StreamAudioOutput: Stopped streaming to a client...")
+
 # -----------------------------------------------------------------------------
-# ----- MJPEG receiver -----
+# ----- MJPEG / MP3 receiver -----
 
 def input_loop(app):
     global thread_running, client_count
@@ -869,6 +973,33 @@ def input_loop(app):
             runGStreamer()
 
     print("StreamInput: Goodbye...")
+
+def audio_input_loop(app):
+    global thread_running
+
+    sock = socket.socket()
+    sock.bind((audio_host, audio_port))
+    sock.listen(1)
+
+    while thread_running:
+        print("StreamAudioInput: Waiting for input stream on port {}...".format(audio_port))
+
+        sd, addr = sock.accept()
+        print("StreamAudioInput: Accepted input stream from {}...".format(addr))
+
+        data = True
+        while data:
+            readable = select([sd], [], [], 0.1)[0]
+            for s in readable:
+                data = s.recv(1024)
+                if not data:
+                    break
+                for q in app.audio_queues:
+                    q.put(data)
+
+        print("StreamAudioInput: Lost input stream from {}!".format(addr))
+
+    print("StreamAudioInput: Goodbye...")
 
 # -----------------------------------------------------------------------------
 # ----- systemd watchdog interface -----
@@ -992,10 +1123,15 @@ if __name__ == '__main__':
     t1.setDaemon(True)
     t1.start()
 
-    print("StreamServer: Launching watchdog thread...")
-    t2 = Thread(target=watchdog_loop, args=[app])
+    print("StreamServer: Launching audio input stream thread...")
+    t2 = Thread(target=audio_input_loop, args=[app])
     t2.setDaemon(True)
     t2.start()
+
+    print("StreamServer: Launching watchdog thread...")
+    t3 = Thread(target=watchdog_loop, args=[app])
+    t3.setDaemon(True)
+    t3.start()
 
     print("StreamServer: Waiting for connections to start streaming...")
     atexit.register(kill_all)
