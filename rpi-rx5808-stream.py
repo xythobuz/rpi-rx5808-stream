@@ -52,33 +52,66 @@ import RPi.GPIO as GPIO
 import time
 
 # -----------------------------------------------------------------------------
+# ----- Preferences -----
 
+# Port where the webinterface will be served. The default port 80 requires this
+# script to be executed as root (with sudo). Use a higher port number like 8080
+# to run it in userspace, or if you already have a webserver installed.
 web_port = 80
-
-video_host = '127.0.0.1'
-video_port = 9999
 
 # Set to None and the first /dev/video* device will be used
 video_device = None
 
+# Parameters of your video input device.
+# Check beforehand if these work and output a proper image, like this:
+#
+# gst-launch-1.0 -v \
+#     v4l2src device=/dev/video0 norm=NTSC-M \
+#         ! video/x-raw, framerate=30000/1001, width=720, height=480 \
+#         ! videorate \
+#         ! video/x-raw, framerate=1/1 \
+#         ! jpegenc \
+#         ! filesink location=test.jpeg
+#
+# GStreamer unfortunately won't output proper help and just exit
+# if your settings don't match here. Try querying available settings:
+#
+# gst-launch-1.0 --gst-debug=v4l2src:5 \
+#     v4l2src device=/dev/video0 \
+#         ! fakesink 2>&1 \
+#     | sed -une '/caps of src/ s/[:;] /\n/gp'
+#
+# (replace /dev/video0 in the command with your input device)
 video_width = 720
 video_height = 480
 video_framerate = '30000/1001'
 video_norm = 'NTSC'
 
+# The MJPEG output framerate fraction is determined by this setting. For old
+# models like my Raspberry Pi 1, keep this value low, like '1/1' (1FPS).
+# Faster framerates could be eg. '10/1' (10FPS).
 video_out_framerate = '1/1'
 
+# Boundary between MJPEG mutlipart frames. Can be set to any random string.
 boundary_string = "raspberrypi-rx5808-stream-xythobuz"
 
+# Size of the canvas of the image shown in the webinterface.
 canvas_width = video_width
 canvas_height = video_height
 
-# GPIOs use board numbering, so pin number of header
+# RX5808 GPIOs; use board numbering, so pin number of header
 pin_ch1 = 15
 pin_ch2 = 13
 pin_ch3 = 11
 
+# Where the image data will be streamed from gstreamer and read from this script.
+# Currently, video_host can only be localhost!
+# Change the port if you have a conflict with some other running application.
+video_host = '127.0.0.1'
+video_port = 9999
+
 # -----------------------------------------------------------------------------
+# ----- Automatic /dev/video* device search -----
 
 video_device_searched = None
 
@@ -108,6 +141,7 @@ def determineVideoDevice():
 determineVideoDevice() # run once at beginning so we see device before first stream
 
 # -----------------------------------------------------------------------------
+# ----- Webinterface template pages -----
 
 lastCommandResult = None
 
@@ -455,6 +489,7 @@ def buildErrorPage(environ):
 """
 
 # -----------------------------------------------------------------------------
+# ----- RX5808 SPI GPIO interface -----
 
 pin_data = pin_ch1
 pin_ss = pin_ch2
@@ -645,6 +680,7 @@ def set_frequency(freq):
     return "Success (set freq to {})!".format(hex(channel_data))
 
 # -----------------------------------------------------------------------------
+# ----- Webinterface GET parameter handling -----
 
 def handleSettings(queryString):
     global lastCommandResult
@@ -662,6 +698,7 @@ def handleSettings(queryString):
         print("Got unknown query string: \"{}\"".format(queryString))
 
 # -----------------------------------------------------------------------------
+# ----- External Process / GStreamer control -----
 
 def runCommand(cmd):
     return subprocess.check_output(cmd, shell = True)
@@ -704,6 +741,7 @@ def killGStreamer():
         os.kill(last_proc.pid, signal.SIGKILL)
 
 # -----------------------------------------------------------------------------
+# ----- Webserver -----
 
 class MyWSGIServer(ThreadingMixIn, WSGIServer):
      pass
@@ -711,8 +749,6 @@ class MyWSGIServer(ThreadingMixIn, WSGIServer):
 def create_server(host, port, app, server_class=MyWSGIServer,
           handler_class=WSGIRequestHandler):
      return make_server(host, port, app, server_class, handler_class)
-
-# -----------------------------------------------------------------------------
 
 client_count = 0
 thread_running = True
@@ -740,6 +776,7 @@ class IPCameraApp(object):
             ])
             return iter([error_page_contents])
 
+    # MJPEG client Thread
     def stream(self, start_response):
         global thread_running, client_count
 
@@ -771,6 +808,9 @@ class IPCameraApp(object):
         if client_count == 0:
             print("StreamOutput: Last client, stopping GStreamer...")
             killGStreamer()
+
+# -----------------------------------------------------------------------------
+# ----- MJPEG receiver -----
 
 def input_loop(app):
     global thread_running, client_count
@@ -806,6 +846,7 @@ def input_loop(app):
     print("StreamInput: Goodbye...")
 
 # -----------------------------------------------------------------------------
+# ----- systemd watchdog interface -----
 
 def watchdog_period():
     """Return the time (in seconds) that we need to ping within."""
@@ -905,6 +946,7 @@ def watchdog_loop(app):
         time.sleep(period / 2.0)
 
 # -----------------------------------------------------------------------------
+# ----- main application logic -----
 
 def kill_all():
     global thread_running
