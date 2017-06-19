@@ -97,6 +97,8 @@ def determineVideoDevice():
         print("No video device found!")
         os.abort()
 
+determineVideoDevice() # run once at beginning so we see device before first stream
+
 # -----------------------------------------------------------------------------
 
 lastCommandResult = None
