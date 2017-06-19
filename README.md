@@ -42,6 +42,8 @@ You can check the status, output and control the service with these commands:
 
 It will automatically be restarted by systemd after crashes.
 
+See the beginning of the rpi-rx5808-stream.py file for all the customizable parameters. You can just run `sudo make install` again after any changes to reinstall and restart the service.
+
 ## License
 
 Large parts of the included Python server script are based on the work of [srinathava in the raspberry-pi-stream-audio-video project](https://github.com/srinathava/raspberry-pi-stream-audio-video). This in turn was based on the [HTTP live streaming implementation by Jeremy Grosser](http://synack.me/blog/implementing-http-live-streaming).
