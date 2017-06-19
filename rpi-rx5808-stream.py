@@ -99,28 +99,6 @@ boundary_string = "raspberrypi-rx5808-stream-xythobuz"
 canvas_width = video_width
 canvas_height = video_height
 
-# RX5808 GPIOs; use board numbering, so pin number of header
-pin_ch1 = 15
-pin_ch2 = 13
-pin_ch3 = 11
-
-# Maximum number of clients that are allowed to be connected to the
-# MJPEG stream at the same time. Any more will get a 503 with a proper message.
-# Set this to zero to disable the check.
-# This setting is especially useful for less powerful old Raspberry Pi models.
-# I'm using a RPi1 and with more than 1 FPS or more than 1 client the CPU usage
-# rises over 100% and everything pretty much stands still.
-maximum_clients = 1
-
-# Where the image data will be streamed from gstreamer and read from this script.
-# Currently, video_host can only be localhost!
-# Change the port if you have a conflict with some other running application.
-video_host = '127.0.0.1'
-video_port = 9999
-
-audio_host = '127.0.0.1'
-audio_port = 9998
-
 # Parameters for your audio input device.
 # Test the audio recording like this:
 #
@@ -145,6 +123,28 @@ audio_rate = "48000"
 # MP3 output bitrate. Valid values here are:
 # 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256 or 320
 audio_mp3_bitrate = "24"
+
+# RX5808 GPIOs; use board numbering, so pin number of header
+pin_ch1 = 15
+pin_ch2 = 13
+pin_ch3 = 11
+
+# Maximum number of MJPEG clients that are allowed to be connected to the
+# MJPEG stream at the same time. Any more will get a 503 with a proper message.
+# Set this to zero to disable the check.
+# This setting is especially useful for less powerful old Raspberry Pi models.
+# I'm using a RPi1 and with more than 1 FPS or more than 1 client the CPU usage
+# rises over 100% and everything pretty much stands still.
+maximum_clients = 1
+
+# Where the image data will be streamed from gstreamer and read from this script.
+# Currently, video_host can only be localhost!
+# Change the port if you have a conflict with some other running application.
+video_host = '127.0.0.1'
+video_port = 9999
+
+audio_host = '127.0.0.1'
+audio_port = 9998
 
 # -----------------------------------------------------------------------------
 # ----- Automatic /dev/video* device search -----
@@ -221,7 +221,7 @@ def buildIndexPage(environ):
             <p>Stream status: Loading...</p>
           </div>
         </td><td>
-          <p>Volume: <input id="volume_control" type="range" min="0" max="100" step="1" oninput="SetVolume(this.value)" onchange="SetVolume(this.value)"></input> <span id="volume_text" /></p>
+          <p>Audio Volume: <input id="volume_control" type="range" min="0" max="100" step="1" oninput="SetVolume(this.value)" onchange="SetVolume(this.value)"></input> <span id="volume_text" /></p>
           <hr />
           <p>Currently selected Frequency: <b>""" + get_frequency() + """</b> """ + get_osc_settings() + """</p>
           <hr />
@@ -330,7 +330,7 @@ def buildIndexPage(environ):
     <p><a href="?quit">Restart RX5808 Streaming Server</a></p>
     <p><a href="?reboot">Reboot Raspberry Pi</a></p>
     <hr />
-    <p>Version 0.2 - Made by <a href="http://xythobuz.de">Thomas Buck &lt;xythobuz@xythobuz.de&gt;</a></p>
+    <p>Version 0.3 - Made by <a href="http://xythobuz.de">Thomas Buck &lt;xythobuz@xythobuz.de&gt;</a></p>
   </body>
   <script type="text/javascript">
 var MJPEG = (function(module) {
@@ -424,9 +424,10 @@ var MJPEG = (function(module) {
 
     var volume_control = document.getElementById('volume_control');
     var volume_text = document.getElementById('volume_text');
+
+    // Set default volume
     volume_control.value = 10;
     volume_text.innerHTML = "10%"
-
     audio_player.volume = 0.1;
 
     function scaleRect(srcSize, dstSize) {
