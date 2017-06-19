@@ -58,6 +58,9 @@ web_port = 80
 video_host = '127.0.0.1'
 video_port = 9999
 
+# Set to None and the first /dev/video* device will be used
+video_device = None
+
 video_width = 720
 video_height = 480
 video_framerate = '30000/1001'
@@ -77,10 +80,15 @@ pin_ch3 = 11
 
 # -----------------------------------------------------------------------------
 
-video_device = None
+video_device_searched = None
 
 def determineVideoDevice():
-    global video_device
+    global video_device_searched
+
+    if video_device != None:
+        video_device_searched = video_device
+        print("Selected \"{}\" as video device...".format(video_device_searched))
+        return
 
     path = "/dev/"
     files = []
@@ -90,10 +98,10 @@ def determineVideoDevice():
             files.append(f)
 
     if len(files) > 0:
-        video_device = files[0]
-        print("Selected \"{}\" as video device...".format(video_device))
+        video_device_searched = files[0]
+        print("Selected \"{}\" as video device...".format(video_device_searched))
     else:
-        video_device = None
+        video_device_searched = None
         print("No video device found!")
         os.abort()
 
@@ -217,7 +225,7 @@ def buildIndexPage(environ):
           <hr />
           <p>Video properties:</p>
           <ul>
-            <li>Input device: """ + str(video_device) + """</li>
+            <li>Input device: """ + str(video_device_searched) + """</li>
             <li>Video format: """ + str(video_norm) + """</li>
             <li>Input resolution: """ + str(video_width) + """x""" + str(video_height) + """</li>
             <li>Input framerate: """ + str(video_framerate) + """</li>
@@ -659,10 +667,10 @@ def runCommand(cmd):
     return subprocess.check_output(cmd, shell = True)
 
 def buildGStreamerCommand():
-    global video_device, video_norm, video_framerate, video_width, video_height
+    global video_device_searched, video_norm, video_framerate, video_width, video_height
 
     return ("exec gst-launch-1.0 " #-v "
-        "v4l2src device=" + str(video_device) + " norm=" + str(video_norm) + " "
+        "v4l2src device=" + str(video_device_searched) + " norm=" + str(video_norm) + " "
         #"videotestsrc pattern=ball "
         "! video/x-raw, framerate=" + str(video_framerate) + ", width=" + str(video_width) + ", height=" + str(video_height) + " "
         "! videorate "
