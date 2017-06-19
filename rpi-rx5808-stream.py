@@ -59,7 +59,6 @@ video_host = '127.0.0.1'
 video_port = 9999
 
 video_width = 720
-
 video_height = 480
 video_framerate = '30000/1001'
 video_norm = 'NTSC'
@@ -67,6 +66,9 @@ video_norm = 'NTSC'
 video_out_framerate = '1/1'
 
 boundary_string = "raspberrypi-rx5808-stream-xythobuz"
+
+canvas_width = video_width
+canvas_height = video_height
 
 # GPIOs use board numbering, so pin number of header
 pin_ch1 = 15
@@ -122,9 +124,9 @@ def buildIndexPage(environ):
     <table>
       <tr>
         <td>
-        <canvas id="player" width=""" + '"' + str(video_width) + '" height="' + str(video_height) + '"' + """ style="background: #000; width: """ + str(video_width) + "px; height: " + str(video_height) + 'px;"' + """>
+        <canvas id="player" width=""" + '"' + str(canvas_width) + '" height="' + str(canvas_height) + '"' + """ style="background: #000; width: """ + str(canvas_width) + "px; height: " + str(canvas_height) + 'px;"' + """>
             <noscript>
-              <img src="/mjpeg_stream" width=""" + '"' + str(video_width) + '" height="' + str(video_height) + '"' + """ />
+              <img src="/mjpeg_stream" width=""" + '"' + str(canvas_width) + '" height="' + str(canvas_height) + '"' + """ />
               <p>Use a modern browser with Javascript and HTML5 support to enable playback controls.</p>
             </noscript>
           </canvas>
@@ -224,26 +226,9 @@ def buildIndexPage(environ):
     </table>
     <hr />
     <p>Current Status (not updated dynamically, refresh to reload!):</p>
-    <p>Video Grabber Status: """
+    <p>Streaming clients: """ + str(client_count)
 
-    # TODO no longer print status when dynamically starting...
-
-    stat = "process never started"
-    if last_proc != None:
-        stat = runCommand('[ -d "/proc/' + str(last_proc.pid) + '" ] && echo "ok" || echo "error - file not found"')
-    if stat.startswith("ok"):
-        stat = runCommand("cat /proc/" + str(last_proc.pid) + "/status | grep State:")
-        if "zombie" in stat:
-            page_text += "Process PID {} is a <b>zombie</b>!".format(str(last_proc.pid))
-        else:
-            page_text += "Process PID {} is running...".format(str(last_proc.pid))
-    else:
-        page_text += "Process PID {} is <b>not</b> running (".format(str(last_proc.pid))
-        page_text += stat + ")!"
-
-    page_text += ' <a href="?reload">(Restart Process)</a>'
-
-    page_text += """</p>
+    page_text += """ (should be zero when no one else is watching)</p>
     <p>Linux Status: """ + runCommand("uptime") + "</p>"
 
     cpu = int(runCommand("cat /sys/class/thermal/thermal_zone0/temp"))
@@ -254,11 +239,11 @@ def buildIndexPage(environ):
     gpu = runCommand("vcgencmd measure_temp | sed 's/temp=//'")
     page_text += "<p>Temperatures CPU: {} GPU: {}</p>".format(cpu, gpu)
 
-    page_text += """</p>
+    page_text += """
     <p><a href="?quit">Restart RX5808 Streaming Server</a></p>
     <p><a href="?reboot">Reboot Raspberry Pi</a></p>
     <hr />
-    <p>Version 0.1 - Made by <a href="http://xythobuz.de">Thomas Buck &lt;xythobuz@xythobuz.de&gt;</a></p>
+    <p>Version 0.2 - Made by <a href="http://xythobuz.de">Thomas Buck &lt;xythobuz@xythobuz.de&gt;</a></p>
   </body>
   <script type="text/javascript">
 var MJPEG = (function(module) {
@@ -359,15 +344,15 @@ var MJPEG = (function(module) {
     }
 
     function updateFrame(img) {
-        var srcRect = {
-          x: 0, y: 0,
-          width: img.naturalWidth,
-          height: img.naturalHeight
-        };
-        var dstRect = scaleRect(srcRect, {
-          width: canvas.width,
-          height: canvas.height
-        });
+      var srcRect = {
+        x: 0, y: 0,
+        width: img.naturalWidth,
+        height: img.naturalHeight
+      };
+      var dstRect = scaleRect(srcRect, {
+        width: canvas.width,
+        height: canvas.height
+      });
       try {
         context.drawImage(img,
           srcRect.x,
@@ -379,7 +364,6 @@ var MJPEG = (function(module) {
           dstRect.width,
           dstRect.height
         );
-        //console.log(".");
       } catch (e) {
         // if we can't draw, don't bother updating anymore
         self.stop();
@@ -388,14 +372,45 @@ var MJPEG = (function(module) {
       }
     }
 
+    function canvasOverlay(r, g, b, a) {
+      var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+      var fr = r / 255.0;
+      var fg = g / 255.0;
+      var fb = b / 255.0;
+      var fa = a / 255.0;
+
+      for (var i = 0; i < imageData.data.length; i += 4) {
+        imageData.data[i + 0] = (fr * fa) + ((1.0 - fa) * (imageData.data[i + 0] / 255.0)) * 255.0;
+        imageData.data[i + 1] = (fg * fa) + ((1.0 - fa) * (imageData.data[i + 1] / 255.0)) * 255.0;
+        imageData.data[i + 2] = (fb * fa) + ((1.0 - fa) * (imageData.data[i + 2] / 255.0)) * 255.0;
+      }
+
+      context.putImageData(imageData, 0, 0);
+    }
+
+    function canvasText(str, y_off = 0, text_size = 16) {
+      context.fillStyle = "white";
+      context.font = "bold " + text_size + "px Arial";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(str, canvas.width / 2, canvas.height / 2 + y_off)
+    }
+
     self.start = function() {
       self.stream.start();
       self.status.innerHTML = "<p>Stream status: Started!</p>";
+
+      canvasText("Loading stream...", 10);
+      canvasText("URL: \"" + url + "\"", -canvas.height / 2 + 10, 12);
     }
 
     self.stop = function() {
       self.stream.stop();
       self.status.innerHTML = "<p>Stream status: Stopped!</p>";
+
+      canvasOverlay(0, 0, 0, 127);
+      canvasText("Click to Play...", -10)
     }
   };
 
@@ -408,9 +423,6 @@ console.log("Connecting to: " + url)
 window.history.pushState(null, null, '/');
 
 var player = new MJPEG.Player("player", url);
-
-// TODO don't autostart (?), show overlay with symbol when paused and text at start
-
 player.start();
   </script>
 </html>
@@ -629,12 +641,6 @@ def handleSettings(queryString):
 
     if queryString == "reboot":
         runCommand("sudo shutdown -r now")
-    elif queryString == "reload":
-        killGStreamer()
-        time.sleep(0.5)
-        runGStreamer()
-        lastCommandResult = "Streaming Server has been restarted..."
-        time.sleep(0.5)
     elif queryString.startswith("freq=") and queryString.endswith("MHz"):
         freq = queryString.replace("freq=", "").replace("MHz", "")
         lastCommandResult = set_frequency(freq)
@@ -653,7 +659,7 @@ def runCommand(cmd):
 def buildGStreamerCommand():
     global video_device, video_norm, video_framerate, video_width, video_height
 
-    return ("exec gst-launch-1.0 -v "
+    return ("exec gst-launch-1.0 " #-v "
         "v4l2src device=" + str(video_device) + " norm=" + str(video_norm) + " "
         #"videotestsrc pattern=ball "
         "! video/x-raw, framerate=" + str(video_framerate) + ", width=" + str(video_width) + ", height=" + str(video_height) + " "
@@ -698,6 +704,9 @@ def create_server(host, port, app, server_class=MyWSGIServer,
 
 # -----------------------------------------------------------------------------
 
+client_count = 0
+thread_running = True
+
 class IPCameraApp(object):
     queues = []
 
@@ -722,11 +731,15 @@ class IPCameraApp(object):
             return iter([error_page_contents])
 
     def stream(self, start_response):
-        global thread_running
+        global thread_running, client_count
 
         print("StreamOutput: Started streaming to a client...")
 
-        # TODO start GStreamer if this is the first client
+        # Start GStreamer if this is the first client
+        client_count += 1
+        if client_count == 1:
+            print("StreamOutput: First client, starting GStreamer...")
+            runGStreamer()
 
         start_response('200 OK', [('Content-type', 'multipart/x-mixed-replace; boundary=' + boundary_string)])
 
@@ -743,13 +756,14 @@ class IPCameraApp(object):
 
         print("StreamOutput: Stopped streaming to a client...")
 
-        # TODO stop GStreamer if this is the last client
-
-thread_running = True
-should_start_gstreamer = False
+        # Stop GStreamer if this was the last client
+        client_count -= 1
+        if client_count == 0:
+            print("StreamOutput: Last client, stopping GStreamer...")
+            killGStreamer()
 
 def input_loop(app):
-    global thread_running, should_start_gstreamer
+    global thread_running, client_count
 
     sock = socket.socket()
     sock.bind((video_host, video_port))
@@ -773,12 +787,11 @@ def input_loop(app):
 
         print("StreamInput: Lost input stream from {}!".format(addr))
 
-        # TODO only restart when clients are listening
-
-        #if thread_running:
-        #    print("StreamInput: Restarting GStreamer child process...")
-        #    time.sleep(0.5)
-        #    runGStreamer()
+        # Only restart when clients are listening
+        if (client_count > 0) and thread_running:
+            print("StreamInput: Restarting GStreamer child process...")
+            time.sleep(0.25)
+            runGStreamer()
 
     print("StreamInput: Goodbye...")
 
@@ -907,9 +920,8 @@ if __name__ == '__main__':
     t2.setDaemon(True)
     t2.start()
 
-    print("StreamServer: Running GStreamer to fill input...")
+    print("StreamServer: Waiting for connections to start streaming...")
     atexit.register(kill_all)
-    runGStreamer()
 
     watchdog_ready()
     watchdog_status(b"Mainloop started, serving content.")
