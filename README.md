@@ -30,12 +30,13 @@ Now, point your browser to your Raspberry Pi (eg. http://raspi-rx5808.local):
 
 You can check the status, output and control the service with these commands:
 
-    systemctl daemon-reload
-	systemctl enable rpi-rx5808-stream.service
+    sudo systemctl daemon-reload
+    sudo systemctl enable rpi-rx5808-stream.service
 
-    systemctl start rpi-rx5808-stream.service
-    systemctl stop rpi-rx5808-stream.service
+    sudo systemctl start rpi-rx5808-stream.service
+    sudo systemctl stop rpi-rx5808-stream.service
 
+    sudo systemctl status rpi-rx5808-stream.service
     sudo journalctl -u rpi-rx5808-stream.service
     sudo journalctl -fu rpi-rx5808-stream.service
 

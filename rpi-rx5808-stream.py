@@ -402,7 +402,7 @@ var MJPEG = (function(module) {
       self.status.innerHTML = "<p>Stream status: Started!</p>";
 
       canvasText("Loading stream...", 10);
-      canvasText("URL: \"" + url + "\"", -canvas.height / 2 + 10, 12);
+      canvasText('URL: "' + url + '"', -canvas.height / 2 + 10, 12);
     }
 
     self.stop = function() {
