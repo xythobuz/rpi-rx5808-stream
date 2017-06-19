@@ -226,6 +226,8 @@ def buildIndexPage(environ):
     <p>Current Status (not updated dynamically, refresh to reload!):</p>
     <p>Video Grabber Status: """
 
+    # TODO no longer print status when dynamically starting...
+
     stat = "process never started"
     if last_proc != None:
         stat = runCommand('[ -d "/proc/' + str(last_proc.pid) + '" ] && echo "ok" || echo "error - file not found"')
@@ -406,6 +408,9 @@ console.log("Connecting to: " + url)
 window.history.pushState(null, null, '/');
 
 var player = new MJPEG.Player("player", url);
+
+// TODO don't autostart (?), show overlay with symbol when paused and text at start
+
 player.start();
   </script>
 </html>
@@ -625,7 +630,7 @@ def handleSettings(queryString):
     if queryString == "reboot":
         runCommand("sudo shutdown -r now")
     elif queryString == "reload":
-        kill_child()
+        killGStreamer()
         time.sleep(0.5)
         runGStreamer()
         lastCommandResult = "Streaming Server has been restarted..."
@@ -641,6 +646,9 @@ def handleSettings(queryString):
         print("Got unknown query string: \"{}\"".format(queryString))
 
 # -----------------------------------------------------------------------------
+
+def runCommand(cmd):
+    return subprocess.check_output(cmd, shell = True)
 
 def buildGStreamerCommand():
     global video_device, video_norm, video_framerate, video_width, video_height
@@ -665,8 +673,19 @@ def runGStreamer():
 
     last_proc = subprocess.Popen(args = buildGStreamerCommand(), stdin = subprocess.PIPE, stderr = subprocess.PIPE, shell = True)
 
-def runCommand(cmd):
-    return subprocess.check_output(cmd, shell = True)
+def killGStreamer():
+    global last_proc
+
+    if last_proc != None:
+        last_proc.kill()
+        time.sleep(0.1)
+
+        os.kill(last_proc.pid, signal.SIGINT)
+        time.sleep(0.1)
+
+        os.kill(last_proc.pid, signal.SIGTERM)
+        time.sleep(0.05)
+        os.kill(last_proc.pid, signal.SIGKILL)
 
 # -----------------------------------------------------------------------------
 
@@ -707,6 +726,8 @@ class IPCameraApp(object):
 
         print("StreamOutput: Started streaming to a client...")
 
+        # TODO start GStreamer if this is the first client
+
         start_response('200 OK', [('Content-type', 'multipart/x-mixed-replace; boundary=' + boundary_string)])
 
         q = Queue()
@@ -721,6 +742,8 @@ class IPCameraApp(object):
                 break
 
         print("StreamOutput: Stopped streaming to a client...")
+
+        # TODO stop GStreamer if this is the last client
 
 thread_running = True
 should_start_gstreamer = False
@@ -749,6 +772,8 @@ def input_loop(app):
                     q.put(data)
 
         print("StreamInput: Lost input stream from {}!".format(addr))
+
+        # TODO only restart when clients are listening
 
         #if thread_running:
         #    print("StreamInput: Restarting GStreamer child process...")
@@ -862,18 +887,7 @@ def kill_all():
     global thread_running
 
     thread_running = False
-    kill_child()
-
-def kill_child():
-    global last_proc
-
-    if last_proc != None:
-        last_proc.kill()
-
-    if last_proc != None:
-        os.kill(last_proc.pid, signal.SIGINT)
-        os.kill(last_proc.pid, signal.SIGTERM)
-        os.kill(last_proc.pid, signal.SIGKILL)
+    killGStreamer()
 
 if __name__ == '__main__':
     watchdog_status(b"Initializing stream...")

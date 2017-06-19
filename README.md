@@ -6,7 +6,7 @@ This short Python script uses GStreamer to convert a video stream from an V4L2 U
 
 Use one of the popular cheap [RX5808](https://www.banggood.com/FPV-5_8G-Wireless-Audio-Video-Receiving-Module-RX5808-p-84775.html) 5.8GHz receiver modules with the [SPI modification done to it](https://github.com/sheaivey/rx5808-pro-diversity/blob/develop/docs/rx5808-spi-mod.md).
 
-To convert the analog video into a digital signal, use one of the many Video4Linux compatible USB devices, [as described in more detail on the LinuxTV pages](https://linuxtv.org/wiki/index.php/Easycap).
+To convert the analog video into a digital signal, use one of the many Video4Linux compatible USB devices, [as described in more detail on the LinuxTV pages](https://linuxtv.org/wiki/index.php/Easycap), like [this one](https://www.banggood.com/DC5V-USB-Video-Capture-Card-TV-Tuner-LED-VCR-DVD-Audio-Adapter-Converter-p-1082298.html?rmmds=search).
 
 [![Photo 1](https://i.imgur.com/vvMfBAB.jpg)](https://i.imgur.com/vx5ThJN.jpg)
 [![Photo 2](https://i.imgur.com/Ipt6x3k.jpg)](https://i.imgur.com/8iMUOLR.jpg)
@@ -27,6 +27,19 @@ On a Raspberry Pi, with a recent Raspbian installed and the USB video grabber an
 Now, point your browser to your Raspberry Pi (eg. http://raspi-rx5808.local):
 
 [![Screenshot Webinterface](https://i.imgur.com/Onb9Mz6.png)](https://i.imgur.com/ELHhqCN.jpg)
+
+You can check the status, output and control the service with these commands:
+
+    systemctl daemon-reload
+	systemctl enable rpi-rx5808-stream.service
+
+    systemctl start rpi-rx5808-stream.service
+    systemctl stop rpi-rx5808-stream.service
+
+    sudo journalctl -u rpi-rx5808-stream.service
+    sudo journalctl -fu rpi-rx5808-stream.service
+
+It will automatically be restarted by systemd after crashes.
 
 ## License
 
