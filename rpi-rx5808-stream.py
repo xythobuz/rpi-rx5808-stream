@@ -104,6 +104,14 @@ pin_ch1 = 15
 pin_ch2 = 13
 pin_ch3 = 11
 
+# Maximum number of clients that are allowed to be connected to the
+# MJPEG stream at the same time. Any more will get a 503 with a proper message.
+# Set this to zero to disable the check.
+# This setting is especially useful for less powerful old Raspberry Pi models.
+# I'm using a RPi1 and with more than 1 FPS or more than 1 client the CPU usage
+# rises over 100% and everything pretty much stands still.
+maximum_clients = 1
+
 # Where the image data will be streamed from gstreamer and read from this script.
 # Currently, video_host can only be localhost!
 # Change the port if you have a conflict with some other running application.
@@ -473,20 +481,28 @@ player.start();
 """
     return page_text
 
-def buildErrorPage(environ):
-    return """
+def buildErrorPage(environ, error, title, text = None):
+    page_text = """
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>404 - Not Found</title>
+    <title>""" + error + """ - """ + title + """</title>
   </head>
   <body>
-    <h1>404 - Not Found</h1>
+    <h1>""" + error + """ - """ + title + """</h1>
+"""
+
+    if text != None:
+        page_text += "<p>" + text + "</p>"
+
+    page_text += """
     <p>Try the <a href="/">homepage</a>...</p>
   </body>
 </html>
 """
+
+    return page_text
 
 # -----------------------------------------------------------------------------
 # ----- RX5808 SPI GPIO interface -----
@@ -767,9 +783,18 @@ class IPCameraApp(object):
             ])
             return iter([index_page_contents])
         elif environ['PATH_INFO'] == '/mjpeg_stream':
-            return self.stream(start_response)
+            if (maximum_clients == 0) or (client_count < maximum_clients):
+                return self.stream(start_response)
+            else:
+                text = "No streaming slots available ({}/{})!".format(client_count, maximum_clients)
+                error_page_contents = buildErrorPage(environ, "503", "Service Unavailable", text)
+                start_response("503 Service Unavailable", [
+                    ("Content-Type", "text/html"),
+                    ("Content-Length", str(len(error_page_contents)))
+                ])
+                return iter([error_page_contents])
         else:
-            error_page_contents = buildErrorPage(environ)
+            error_page_contents = buildErrorPage(environ, "404", "Not Found")
             start_response("404 Not Found", [
                 ("Content-Type", "text/html"),
                 ("Content-Length", str(len(error_page_contents)))
