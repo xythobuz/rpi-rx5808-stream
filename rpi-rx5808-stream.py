@@ -57,7 +57,7 @@ import time
 # Port where the webinterface will be served. The default port 80 requires this
 # script to be executed as root (with sudo). Use a higher port number like 8080
 # to run it in userspace, or if you already have a webserver installed.
-web_port = 80
+web_port = 81
 
 # Set to None and the first /dev/video* device will be used
 video_device = None
@@ -90,7 +90,11 @@ video_norm = 'NTSC'
 # The MJPEG output framerate fraction is determined by this setting. For old
 # models like my Raspberry Pi 1, keep this value low, like '1/1' (1FPS).
 # Faster framerates could be eg. '10/1' (10FPS).
-video_out_framerate = '2/3'
+video_out_framerate = '10/1'
+
+# Time in ms between image redraws for the JS MJPEG client. Should be less than
+# or equal to the time between frames / 2 for your chosen video_out_framerate.
+client_video_refresh_rate = 50
 
 # Boundary between MJPEG mutlipart frames. Can be set to any random string.
 boundary_string = "raspberrypi-rx5808-stream-xythobuz"
@@ -122,7 +126,7 @@ audio_rate = "48000"
 
 # MP3 output bitrate. Valid values here are:
 # 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256 or 320
-audio_mp3_bitrate = "24"
+audio_mp3_bitrate = "96"
 
 # RX5808 GPIOs; use board numbering, so pin number of header
 pin_ch1 = 15
@@ -135,7 +139,7 @@ pin_ch3 = 11
 # This setting is especially useful for less powerful old Raspberry Pi models.
 # I'm using a RPi1 and with more than 1 FPS or more than 1 client the CPU usage
 # rises over 100% and everything pretty much stands still.
-maximum_clients = 1
+maximum_clients = 2
 
 # Where the image data will be streamed from gstreamer and read from this script.
 # Currently, video_host can only be localhost!
@@ -330,7 +334,7 @@ def buildIndexPage(environ):
     <p><a href="?quit">Restart RX5808 Streaming Server</a></p>
     <p><a href="?reboot">Reboot Raspberry Pi</a></p>
     <hr />
-    <p>Version 0.3 - Made by <a href="http://xythobuz.de">Thomas Buck &lt;xythobuz@xythobuz.de&gt;</a></p>
+    <p style="font-size: small; text-align: center;">Version 0.3 - Made by <a href="http://xythobuz.de">Thomas Buck &lt;xythobuz@xythobuz.de&gt;</a></p>
   </body>
   <script type="text/javascript">
 var MJPEG = (function(module) {
@@ -341,7 +345,7 @@ var MJPEG = (function(module) {
     var autoStart = args.autoStart || false;
 
     self.url = args.url;
-    self.refreshRate = args.refreshRate || 250;
+    self.refreshRate = args.refreshRate || """ + str(client_video_refresh_rate) + """;
     self.onStart = args.onStart || null;
     self.onFrame = args.onFrame || null;
     self.onStop = args.onStop || null;
@@ -533,7 +537,9 @@ console.log("Connecting to: " + audio_url);
 window.history.pushState(null, null, '/');
 
 var player = new MJPEG.Player("player", url, "audio_player", audio_url);
-player.start();
+
+// call start for auto-start or stop for non-auto-start
+player.stop();
 
 function SetVolume(val) {
   var player = document.getElementById('audio_player');

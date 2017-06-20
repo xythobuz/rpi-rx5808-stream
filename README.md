@@ -24,9 +24,11 @@ On a Raspberry Pi, with a recent Raspbian installed and the USB video grabber an
     sudo make deps
     sudo make install
 
-Now, point your browser to your Raspberry Pi (eg. http://raspi-rx5808.local):
+Now, point your browser to your Raspberry Pi on port 81 (eg. http://raspi3.local:81).
 
 [![Screenshot Webinterface](https://i.imgur.com/Onb9Mz6.png)](https://i.imgur.com/ELHhqCN.jpg)
+
+See the beginning of the rpi-rx5808-stream.py file for all the customizable parameters. You can just run `sudo make install` again after any changes to reinstall and restart the service.
 
 You can check the status, output and control the service with these commands:
 
@@ -41,8 +43,6 @@ You can check the status, output and control the service with these commands:
     sudo journalctl -fu rpi-rx5808-stream.service
 
 It will automatically be restarted by systemd after crashes.
-
-See the beginning of the rpi-rx5808-stream.py file for all the customizable parameters. You can just run `sudo make install` again after any changes to reinstall and restart the service.
 
 ## License
 
