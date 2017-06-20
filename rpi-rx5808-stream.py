@@ -528,6 +528,11 @@ var MJPEG = (function(module) {
       self.status.innerHTML = "<p>Stream status: Video Started!</p>";
       self.stream.start();
 """
+    else:
+        page_text += """
+      self.status.innerHTML = "<p>Stream status: Video Started!</p>";
+      self.stream.start();
+"""
 
     page_text += """
     }
