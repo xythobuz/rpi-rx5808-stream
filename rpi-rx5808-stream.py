@@ -508,8 +508,8 @@ var MJPEG = (function(module) {
       canvasText("Loading stream...", 10);
       canvasText('URL: "' + url + '"', -canvas.height / 2 + 10, 12);
 
-      audio_player.src = audio_url;
       audio_player.onplay = self.started_audio;
+      audio_player.src = audio_url;
       audio_player.play();
     }
 
@@ -931,7 +931,7 @@ class IPCameraApp(object):
 
     # MP3 client Thread
     def stream_audio(self, start_response):
-        global thread_running
+        global thread_running, client_count
 
         print("StreamAudioOutput: Started streaming to a client...")
 
