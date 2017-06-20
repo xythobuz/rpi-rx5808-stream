@@ -227,7 +227,7 @@ def buildIndexPage(environ):
               <p>Use a modern browser with Javascript and HTML5 support to enable audio playback.</p>
             </noscript>
           </audio>
-          <p><a href="/mjpeg_stream">Link to video stream</a></p>
+          <p><a href="/mjpeg_stream">Link to MJPEG video stream</a> <a href="/mp3_stream">Link to MP3 audio stream</a></p>
           <p>Click on video frame to play or pause stream:</p>
           <div id="status">
             <p>Stream status: Loading...</p>
