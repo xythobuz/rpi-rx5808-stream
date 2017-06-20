@@ -146,7 +146,7 @@ maximum_clients = 4
 # Audio will be preloaded and the video only started when audio is ready.
 # This helps with the sync, but isn't perfect and causes a pretty big delay when
 # starting the stream.
-play_video_immediately = False
+play_video_immediately = True
 autoplay_stream = True
 
 # Where the image data will be streamed from gstreamer and read from this script.
