@@ -142,6 +142,13 @@ pin_ch3 = 11
 # rises over 100% and everything pretty much stands still.
 maximum_clients = 4
 
+# Audio & Video are out-of-sync by definition when using this technique.
+# Audio will be preloaded and the video only started when audio is ready.
+# This helps with the sync, but isn't perfect and causes a pretty big delay when
+# starting the stream.
+play_video_immediately = False
+autoplay_stream = True
+
 # Where the image data will be streamed from gstreamer and read from this script.
 # Currently, video_host can only be localhost!
 # Change the port if you have a conflict with some other running application.
@@ -508,14 +515,21 @@ var MJPEG = (function(module) {
       canvasText("Loading stream...", 10);
       canvasText('URL: "' + url + '"', -canvas.height / 2 + 10, 12);
 
-      audio_player.oncanplay = self.started_audio;
       audio_player.src = audio_url;
       audio_player.play();
+"""
+
+    if not play_video_immediately:
+        page_text += """
+      audio_player.oncanplay = self.started_audio;
     }
 
     self.started_audio = function() {
       self.status.innerHTML = "<p>Stream status: Video Started!</p>";
       self.stream.start();
+"""
+
+    page_text += """
     }
 
     self.stop = function() {
@@ -543,9 +557,14 @@ window.history.pushState(null, null, '/');
 
 var player = new MJPEG.Player("player", url, "audio_player", audio_url);
 
-// call start for auto-start or stop for non-auto-start
-player.stop();
+"""
 
+    if autoplay_stream:
+        page_text += "player.start();"
+    else:
+        page_text += "player.stop();"
+
+    page_text += """
 function SetVolume(val) {
   var player = document.getElementById('audio_player');
   var volume_text = document.getElementById('volume_text');
