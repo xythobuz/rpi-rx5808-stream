@@ -508,7 +508,7 @@ var MJPEG = (function(module) {
       canvasText("Loading stream...", 10);
       canvasText('URL: "' + url + '"', -canvas.height / 2 + 10, 12);
 
-      audio_player.onplay = self.started_audio;
+      audio_player.oncanplay = self.started_audio;
       audio_player.src = audio_url;
       audio_player.play();
     }
