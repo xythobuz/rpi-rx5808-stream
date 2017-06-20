@@ -499,7 +499,7 @@ var MJPEG = (function(module) {
       context.font = "bold " + text_size + "px Arial";
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.fillText(str, canvas.width / 2, canvas.height / 2 + y_off)
+      context.fillText(str, canvas.width / 2, canvas.height / 2 + y_off);
     }
 
     self.start = function() {
@@ -513,7 +513,7 @@ var MJPEG = (function(module) {
       audio_player.play();
     }
 
-    self.started_audio = function() {}
+    self.started_audio = function() {
       self.status.innerHTML = "<p>Stream status: Video Started!</p>";
       self.stream.start();
     }
@@ -526,7 +526,7 @@ var MJPEG = (function(module) {
       self.status.innerHTML = "<p>Stream status: Stopped!</p>";
 
       canvasOverlay(0, 0, 0, 127);
-      canvasText("Click to Play...", -10)
+      canvasText("Click to Play...", -10);
     }
   };
 
