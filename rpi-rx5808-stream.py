@@ -133,13 +133,14 @@ pin_ch1 = 15
 pin_ch2 = 13
 pin_ch3 = 11
 
-# Maximum number of MJPEG clients that are allowed to be connected to the
-# MJPEG stream at the same time. Any more will get a 503 with a proper message.
+# Maximum number of clients that are allowed to be connected to the MJPEG and
+# MP3 stream at the same time. Any more will get a 503 with a proper message.
+# Set to at least 4 for two browser connections (2xaudio + 2xvideo).
 # Set this to zero to disable the check.
 # This setting is especially useful for less powerful old Raspberry Pi models.
 # I'm using a RPi1 and with more than 1 FPS or more than 1 client the CPU usage
 # rises over 100% and everything pretty much stands still.
-maximum_clients = 2
+maximum_clients = 4
 
 # Where the image data will be streamed from gstreamer and read from this script.
 # Currently, video_host can only be localhost!
@@ -502,15 +503,19 @@ var MJPEG = (function(module) {
     }
 
     self.start = function() {
-      self.stream.start();
-      self.status.innerHTML = "<p>Stream status: Started!</p>";
+      self.status.innerHTML = "<p>Stream status: Audio Started!</p>";
 
       canvasText("Loading stream...", 10);
-      canvasText("(Audio may be delayed a bit)", 60);
       canvasText('URL: "' + url + '"', -canvas.height / 2 + 10, 12);
 
       audio_player.src = audio_url;
+      audio_player.onplay = self.started_audio;
       audio_player.play();
+    }
+
+    self.started_audio = function() {}
+      self.status.innerHTML = "<p>Stream status: Video Started!</p>";
+      self.stream.start();
     }
 
     self.stop = function() {
@@ -873,10 +878,10 @@ class IPCameraApp(object):
                 ])
                 return iter([error_page_contents])
         elif environ['PATH_INFO'] == '/mp3_stream':
-            if client_count > 0:
+            if (maximum_clients == 0) or (client_count < maximum_clients):
                 return self.stream_audio(start_response)
             else:
-                text = "Stream hasn't been started. Please GET /mjpeg_stream first!"
+                text = "No streaming slots available ({}/{})!".format(client_count, maximum_clients)
                 error_page_contents = buildErrorPage(environ, "503", "Service Unavailable", text)
                 start_response("503 Service Unavailable", [
                     ("Content-Type", "text/html"),
@@ -930,6 +935,12 @@ class IPCameraApp(object):
 
         print("StreamAudioOutput: Started streaming to a client...")
 
+        # Start GStreamer if this is the first client
+        client_count += 1
+        if client_count == 1:
+            print("StreamOutput: First client, starting GStreamer...")
+            runGStreamer()
+
         start_response('200 OK', [('Content-type', 'audio/mpeg')])
 
         q = Queue()
@@ -944,6 +955,12 @@ class IPCameraApp(object):
                 break
 
         print("StreamAudioOutput: Stopped streaming to a client...")
+
+        # Stop GStreamer if this was the last client
+        client_count -= 1
+        if client_count == 0:
+            print("StreamOutput: Last client, stopping GStreamer...")
+            killGStreamer()
 
 # -----------------------------------------------------------------------------
 # ----- MJPEG / MP3 receiver -----
